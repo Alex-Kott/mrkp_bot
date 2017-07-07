@@ -109,9 +109,10 @@ class Scoreboard(BaseModel):
 		Poll.upd(msg_id)
 
 
-class Type(BaseModel): # тип сообщения (опрос, обычный пост или что-то ещё). нужен при обработке колбэков
+class Message(BaseModel): # тип сообщения (опрос, обычный пост или что-то ещё). нужен при обработке колбэков
 	msg_id = IntegerField(primary_key = True)
 	type = TextField()
+	text = TextField()
 
 
 @bot.message_handler(commands = ['init'])
@@ -119,31 +120,29 @@ def init(message):
 	Like.create_table(fail_silently = True)
 	Post.create_table(fail_silently = True)
 	Poll.create_table(fail_silently = True)
-	Type.create_table(fail_silently = True) 
+	Message.create_table(fail_silently = True) 
 	Scoreboard.create_table(fail_silently = True)
 	
 
 
 @bot.message_handler(content_types=['text'])
 def new_post(message):
-	#print(message.text)
+	print(message.text)
 	sid = message.chat.id
 	keyboard = types.InlineKeyboardMarkup()
 	poll = re.findall(r'\/poll', message.text)
 	if len(poll) > 0:
 		try:
-			items = re.split(r'\/poll', message.text)[1].strip()
+			(text, items) = re.split(r'\/poll', message.text)
 		except:
 			bot(sid, "Вы ввели некорректные варианты опроса")
-		item = re.split(r'\n', items)
+		item = re.split(r'\n', items.strip())
 		for i in item:
-			#poll = Poll.create_or_get()
 			btn = types.InlineKeyboardButton(text = i, callback_data = i)
 			keyboard.add(btn)
 
-		text = re.sub(r'(\/poll)(\n|.)*', '', message.text)
 		sent = bot.send_message(chid, text, parse_mode = "Markdown", reply_markup = keyboard)
-		Type.create(msg_id = sent.message_id, type="poll")
+		Message.create(msg_id = sent.message_id, type="poll", text = text)
 		item = list(set(item))
 		for j in item:
 			Poll.create(msg_id = sent.message_id, item = j, point = 0)
@@ -154,14 +153,14 @@ def new_post(message):
 		dislike_btn = types.InlineKeyboardButton(text = dislike, callback_data = dislike)
 		keyboard.add(like_btn, dislike_btn)
 		sent = bot.send_message(chid, message.text, parse_mode="Markdown", reply_markup=keyboard)
-		Type.create(msg_id = sent.message_id, type=common)
+		Message.create(msg_id = sent.message_id, type=common)
 
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
 	#is_poll = Poll.select().where(Poll.msg_id == call.message.message_id).count()
-	msg = Type.get(Type.msg_id == call.message.message_id)
+	msg = Message.get(Message.msg_id == call.message.message_id)
 	e = call.data
 	if msg.type == common:
 		mark = Like.create_or_get(msg_id = call.message.message_id, user_id = call.from_user.id)
@@ -198,8 +197,9 @@ def callback_inline(call):
 		count = Scoreboard.select(fn.Count(Scoreboard.id)).where(Scoreboard.msg_id == call.message.message_id).scalar()
 		
 		keyboard = types.InlineKeyboardMarkup()
-		for item in Poll.select().where(Poll.msg_id == call.message.message_id):#.order_by(Poll.point.desc()):
-			btn = types.InlineKeyboardButton(text = "{} — {}".format(item.item, item.point), callback_data = item.item)
+		for item in Poll.select().where(Poll.msg_id == call.message.message_id).order_by(Poll.point.desc()):
+			procent = item.point / (count / 100)
+			btn = types.InlineKeyboardButton(text = "{} — {} ({}%)".format(item.item, item.point, procent), callback_data = item.item)
 			keyboard.add(btn)
 		bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 
