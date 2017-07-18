@@ -200,7 +200,5 @@ def callback_inline(call):
 
 
 if __name__ == '__main__':
-	try:
-		bot.polling(none_stop=True)
-	except Exception as e:
-		print(e)
+	bot.polling(none_stop=True)
+	
