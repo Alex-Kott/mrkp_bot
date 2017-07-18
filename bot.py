@@ -61,7 +61,6 @@ class Poll(BaseModel):
 			return Poll.select().where((Poll.msg_id == msg_id) & (Poll.item == item)).get()
 
 	def upd(msg_id):
-		#for item in Scoreboard.get(Scoreboard.msg_id == msg_id):
 		lst = (Scoreboard.select(Scoreboard, fn.Count(Scoreboard.user_id).alias('count'))
 					    .where(Scoreboard.msg_id == msg_id)
 					    .group_by(Scoreboard.item))
@@ -70,13 +69,10 @@ class Poll(BaseModel):
 		for p in polls:
 			count = (Scoreboard.select(fn.Count(Scoreboard.user_id))
 							   .where(Scoreboard.msg_id == msg_id & Scoreboard.item == p.item))
-			#poll = Poll.get(Poll.msg_id == msg_id & Poll.item)
 			p.point = count
 			p.save()
-			#print("{} {} {}".format(p.msg_id, p.item, p.point))
 
 		for i in lst:
-			#print("{} {} {} {}".format(i.msg_id, i.item, i.user_id, i.count))
 			poll = Poll.get(Poll.msg_id == i.msg_id, Poll.item == i.item)
 			poll.point = i.count
 			poll.save()
@@ -90,8 +86,6 @@ class Scoreboard(BaseModel):
 	user_id = IntegerField()
 
 	def vote(msg_id, item, user_id):
-		#print("{} {} {}".format(msg_id, item, user_id))
-
 		try:
 			score = Scoreboard.get(Scoreboard.msg_id == msg_id, Scoreboard.user_id == user_id)
 			if score.item == item:
@@ -100,12 +94,7 @@ class Scoreboard(BaseModel):
 				score.item = item
 			score.save()
 		except Exception as e:
-			
 			Scoreboard.create(msg_id = msg_id, item = item, user_id = user_id)
-			#print("Create", end="\n\n")
-			
-			
-
 		Poll.upd(msg_id)
 
 
@@ -127,7 +116,6 @@ def init(message):
 
 @bot.message_handler(content_types=['text'])
 def new_post(message):
-	print(message.text)
 	sid = message.chat.id
 	keyboard = types.InlineKeyboardMarkup()
 	poll = re.findall(r'\/poll', message.text)
@@ -153,13 +141,12 @@ def new_post(message):
 		dislike_btn = types.InlineKeyboardButton(text = dislike, callback_data = dislike)
 		keyboard.add(like_btn, dislike_btn)
 		sent = bot.send_message(chid, message.text, parse_mode="Markdown", reply_markup=keyboard)
-		Message.create(msg_id = sent.message_id, type=common)
+		Message.create(msg_id = sent.message_id, type=common, text = message.text)
 
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
-	#is_poll = Poll.select().where(Poll.msg_id == call.message.message_id).count()
 	msg = Message.get(Message.msg_id == call.message.message_id)
 	e = call.data
 	if msg.type == common:
@@ -189,20 +176,26 @@ def callback_inline(call):
 		keyboard = types.InlineKeyboardMarkup()
 		like_btn = types.InlineKeyboardButton(text = "{} {}".format(ls, like), callback_data = like)
 		dislike_btn = types.InlineKeyboardButton(text = "{} {}".format(ds, dislike), callback_data = dislike)
-		keyboard.add(dislike_btn, like_btn)
+		keyboard.add(like_btn, dislike_btn)
 		bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 	
 	if msg.type == poll:
 		scoreboard = Scoreboard.vote(call.message.message_id, e, call.from_user.id)
 		count = Scoreboard.select(fn.Count(Scoreboard.id)).where(Scoreboard.msg_id == call.message.message_id).scalar()
 		
+		text = "{}\n👥 Всего проголосовавших: {}".format(msg.text, count)
+
 		keyboard = types.InlineKeyboardMarkup()
 		for item in Poll.select().where(Poll.msg_id == call.message.message_id).order_by(Poll.point.desc()):
-			procent = item.point / (count / 100)
+			try:
+				procent = item.point / (count / 100)
+			except ZeroDivisionError:
+				procent = 0
 			btn = types.InlineKeyboardButton(text = "{} — {} ({}%)".format(item.item, item.point, procent), callback_data = item.item)
 			keyboard.add(btn)
-		bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 
+		#bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
+		bot.edit_message_text(chat_id = call.message.chat.id, message_id = call.message.message_id, text = text,  reply_markup=keyboard)
 
 
 
