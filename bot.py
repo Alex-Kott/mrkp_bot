@@ -100,7 +100,7 @@ class Scoreboard(BaseModel):
 
 class Message(BaseModel): # тип сообщения (опрос, обычный пост или что-то ещё). нужен при обработке колбэков
 	msg_id = IntegerField(primary_key = True)
-	type = TextField()
+	msg_type = TextField()
 	text = TextField()
 
 
@@ -149,7 +149,7 @@ def new_post(message):
 def callback_inline(call):
 	msg = Message.get(Message.msg_id == call.message.message_id)
 	e = call.data
-	if msg.type == common:
+	if msg.msg_type == common:
 		mark = Like.create_or_get(msg_id = call.message.message_id, user_id = call.from_user.id)
 
 		if mark.like == 0:
@@ -179,7 +179,7 @@ def callback_inline(call):
 		keyboard.add(like_btn, dislike_btn)
 		bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 	
-	if msg.type == poll:
+	if msg.msg_type == poll:
 		scoreboard = Scoreboard.vote(call.message.message_id, e, call.from_user.id)
 		count = Scoreboard.select(fn.Count(Scoreboard.id)).where(Scoreboard.msg_id == call.message.message_id).scalar()
 		
