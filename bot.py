@@ -9,7 +9,9 @@ import json
 bot = telebot.TeleBot(cfg.token)
 
 chid = -1001124459892 # test channel id
-like = "👍"
+#like = "👍"
+thumb_up = "👍"
+like = "🌀" 
 dislike = "👎"
 poll = "poll" # пост-опрос
 common = "common" # тип поста. обыкновенный пост с лайком и дизлайком под сообщением.
@@ -20,7 +22,7 @@ db = SqliteDatabase('bot.db')
 
 def xlikes(p): 
 	x = math.ceil(p/10)
-	return like * x
+	return thumb_up * x
 
 
 class BaseModel(Model):
@@ -119,7 +121,7 @@ class Scoreboard(BaseModel):
 class Message(BaseModel): # тип сообщения (опрос, обычный пост или что-то ещё). нужен при обработке колбэков
 	msg_id = IntegerField(primary_key = True)
 	user_id = IntegerField()
-	type = TextField()
+	msg_type = TextField()
 	text = TextField()
 
 
@@ -136,11 +138,11 @@ def init(message):
 
 @bot.message_handler(content_types=['text'])
 def new_post(message):
-	print(message.text)
+	#print(message.text)
 	sid = message.chat.id
 	keyboard = types.InlineKeyboardMarkup()
-	poll = re.findall(r'\/poll', message.text)
-	if len(poll) > 0:
+	items = re.findall(r'\/poll', message.text)
+	if len(items) > 0:
 		try:
 			(text, items) = re.split(r'\/poll', message.text)
 		except:
@@ -150,34 +152,31 @@ def new_post(message):
 			btn = types.InlineKeyboardButton(text = i, callback_data = i)
 			keyboard.add(btn)
 
-		#sent = bot.send_message(chid, text, parse_mode = "Markdown", reply_markup = keyboard)
-		#Message.create(msg_id = sent.message_id, user_id = sid, type="poll", text = text)
-		ll = Message.create(user_id = sid, type="poll", text = text)
+		sent = bot.send_message(chid, text, parse_mode = "Markdown", reply_markup = keyboard)
+		Message.create(msg_id = sent.message_id, user_id = sid, msg_type=poll, text = text)
 		message = Message.select().where(Message.user_id == sid).order_by(Message.msg_id.desc()).get()
-		print(message.msg_id, end="\n\n")
 		item = list(set(item))
 		for j in item:
 			Poll.create(msg_id = message.msg_id, item = j, point = 0)
 
-
 	else:
 		like_btn = types.InlineKeyboardButton(text = like, callback_data = like)
 		dislike_btn = types.InlineKeyboardButton(text = dislike, callback_data = dislike)
-		keyboard.add(like_btn, dislike_btn)
-		#sent = bot.send_message(chid, message.text, parse_mode="Markdown", reply_markup=keyboard)
-		#Message.create(msg_id = sent.message_id, user_id = sid, type=common, text = message.text)
-		Message.create(user_id = sid, type=common, text = message.text)
+		#keyboard.add(like_btn, dislike_btn)
+		keyboard.add(like_btn)
+		sent = bot.send_message(chid, message.text, parse_mode="Markdown", reply_markup=keyboard)
+		Message.create(msg_id = sent.message_id, user_id = sid, msg_type=common, text = message.text)
+		#Message.create(user_id = sid, type=common, text = message.text)
 
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
-	print(call)
-	return True
+	#print(call)
 	#is_poll = Poll.select().where(Poll.msg_id == call.message.message_id).count()
 	msg = Message.get(Message.msg_id == call.message.message_id)
 	e = call.data
-	if msg.type == common:
+	if msg.msg_type == common:
 		mark = Like.create_or_get(msg_id = call.message.message_id, user_id = call.from_user.id)
 
 		if mark.like == 0:
@@ -200,14 +199,17 @@ def callback_inline(call):
 		post.likes = ls
 		post.dislikes = ds
 		post.save()
+		if ls == 0:
+			ls = ''
 
 		keyboard = types.InlineKeyboardMarkup()
 		like_btn = types.InlineKeyboardButton(text = "{} {}".format(ls, like), callback_data = like)
 		dislike_btn = types.InlineKeyboardButton(text = "{} {}".format(ds, dislike), callback_data = dislike)
-		keyboard.add(like_btn, dislike_btn)
+		#keyboard.add(like_btn, dislike_btn)
+		keyboard.add(like_btn)
 		bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 	
-	if msg.type == poll:
+	if msg.msg_type == poll:
 		scoreboard = Scoreboard.vote(call.message.message_id, e, call.from_user.id)
 		count = Scoreboard.select(fn.Count(Scoreboard.id)).where(Scoreboard.msg_id == call.message.message_id).scalar()
 		msg = Message.get(Message.msg_id == call.message.message_id)
@@ -236,12 +238,12 @@ def query_text(message):
 		print("{} {}".format(m.user_id, m.text))
 
 		kb = types.InlineKeyboardMarkup()
-		if m.type == common:
+		if m.msg_type == common:
 			like_btn = types.InlineKeyboardButton(text = like, callback_data = like)
 			dislike_btn = types.InlineKeyboardButton(text = dislike, callback_data = dislike)
 			kb.add(like_btn, dislike_btn)
 
-		if m.type == poll:
+		if m.msg_type == poll:
 			for b in Poll.select().where(Poll.msg_id == m.msg_id):
 				callback_data = {'item': b.item, 'msg_id': m.msg_id}
 				btn = types.InlineKeyboardButton(text = b.item, callback_data = json.dumps(callback_data))
@@ -255,12 +257,9 @@ def query_text(message):
 		)
 		results.append(single_msg)
 	bot.answer_inline_query(inline_query_id = message.id, results = results)
-	#print(message, end="\n\n")
 
 
 
 if __name__ == '__main__':
-	try:
-		bot.polling(none_stop=True)
-	except Exception as e:
-		print(e)
+	bot.polling(none_stop=True)
+	
