@@ -219,9 +219,10 @@ def callback_inline(call):
 		keyboard = types.InlineKeyboardMarkup()
 		for item in Poll.select().where(Poll.msg_id == call.message.message_id).order_by(Poll.point.desc()):
 			percent = item.point / (count / 100)
-			btn = types.InlineKeyboardButton(text = "{} — {} ({}%)".format(item.item, item.point, round(percent, 1)), callback_data = item.item)
+			btn = types.InlineKeyboardButton(text = "{} — {}".format(item.item, item.point), callback_data = item.item)
 			keyboard.add(btn)
-			msg_text += "\n\n{} — {} \n {}".format(item.item, item.point, xlikes(percent))
+			msg_text += "\n\n{} — {} \n {} ({}%)".format(item.item, item.point, xlikes(percent), round(percent, 1))
+		msg_text += "\n\n👥 Проголосовало пользователей: {}".format(count)
 		bot.edit_message_text(chat_id = call.message.chat.id, message_id = call.message.message_id, text = msg_text,  reply_markup=keyboard)
 		#bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 
