@@ -15,14 +15,18 @@ like = "🌀"
 dislike = "👎"
 poll = "poll" # пост-опрос
 common = "common" # тип поста. обыкновенный пост с лайком и дизлайком под сообщением.
+empty = "▫️"
 
 emoji = {like : 1, dislike : -1}
 
 db = SqliteDatabase('bot.db')
 
 def xlikes(p): 
-	x = math.ceil(p/10)
-	return thumb_up * x
+	if p == 0:
+		return empty
+	else:
+		x = math.ceil(p/15)
+		return thumb_up * x
 
 
 class BaseModel(Model):
@@ -148,11 +152,14 @@ def new_post(message):
 		except:
 			bot(sid, "Вы ввели некорректные варианты опроса")
 		item = re.split(r'\n', items.strip())
+		msg_text = text
 		for i in item:
 			btn = types.InlineKeyboardButton(text = i, callback_data = i)
 			keyboard.add(btn)
+			msg_text += "\n{}\n{}0%\n".format(i, empty)
+		msg_text += "\n👥 Ещё никто не проголосовал"
 
-		sent = bot.send_message(chid, text, parse_mode = "Markdown", reply_markup = keyboard)
+		sent = bot.send_message(chid, msg_text, parse_mode = "Markdown", reply_markup = keyboard)
 		Message.create(msg_id = sent.message_id, user_id = sid, msg_type=poll, text = text)
 		message = Message.select().where(Message.user_id == sid).order_by(Message.msg_id.desc()).get()
 		item = list(set(item))
@@ -218,11 +225,19 @@ def callback_inline(call):
 		
 		keyboard = types.InlineKeyboardMarkup()
 		for item in Poll.select().where(Poll.msg_id == call.message.message_id).order_by(Poll.point.desc()):
-			percent = item.point / (count / 100)
-			btn = types.InlineKeyboardButton(text = "{} — {}".format(item.item, item.point), callback_data = item.item)
+			try:
+				percent = item.point / (count / 100)
+			except ZeroDivisionError:
+				percent = 0
+			
+			if item.point == 0:
+				msg_text += "\n{}  \n {} {}%\n".format(item.item, xlikes(percent), round(percent))
+				btn = types.InlineKeyboardButton(text = "{}".format(item.item), callback_data = item.item)
+			else:
+				msg_text += "\n{} – {} \n {} {}%\n".format(item.item, item.point, xlikes(percent), round(percent))
+				btn = types.InlineKeyboardButton(text = "{} – {}".format(item.item, item.point), callback_data = item.item)
 			keyboard.add(btn)
-			msg_text += "\n\n{} — {} \n {} ({}%)".format(item.item, item.point, xlikes(percent), round(percent, 1))
-		msg_text += "\n\n👥 Проголосовало пользователей: {}".format(count)
+		msg_text += "\n👥 Проголосовало пользователей: {}".format(count)
 		bot.edit_message_text(chat_id = call.message.chat.id, message_id = call.message.message_id, text = msg_text,  reply_markup=keyboard)
 		#bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 
