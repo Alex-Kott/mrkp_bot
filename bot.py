@@ -23,12 +23,17 @@ admins = {72639889, 5844335, 328241232}
 
 db = SqliteDatabase('bot.db')
 
-def xlikes(p): 
+def xlikes(mp, p): 
+	try:
+		x = p / (mp / 100)
+	except ZeroDivisionError:
+		x = 0
+	d = 14.3 # 100 / 7 (лайков)
 	if p == 0:
 		return empty
 	else:
-		x = math.ceil(p/15)
-		return thumb_up * x
+		n = math.ceil(x/d)
+		return thumb_up * n
 
 
 class BaseModel(Model):
@@ -224,8 +229,9 @@ def callback_inline(call):
 		msg = Message.get(Message.msg_id == call.message.message_id)
 		msg_text = msg.text
 
-		
 		keyboard = types.InlineKeyboardMarkup()
+
+		maxpoint = Poll.select(fn.Max(Poll.point)).where(Poll.msg_id == call.message.message_id).scalar()
 		for item in Poll.select().where(Poll.msg_id == call.message.message_id).order_by(Poll.point.desc()):
 			try:
 				percent = item.point / (count / 100)
@@ -233,10 +239,10 @@ def callback_inline(call):
 				percent = 0
 			
 			if item.point == 0:
-				msg_text += "\n{}  \n {} {}%\n".format(item.item, xlikes(percent), round(percent))
+				msg_text += "\n{}  \n {} {}%\n".format(item.item, xlikes(maxpoint, item.point), round(percent))
 				btn = types.InlineKeyboardButton(text = "{}".format(item.item), callback_data = item.item)
 			else:
-				msg_text += "\n{} – {} \n {} {}%\n".format(item.item, item.point, xlikes(percent), round(percent))
+				msg_text += "\n{} – {} \n {} {}%\n".format(item.item, item.point, xlikes(maxpoint, item.point), round(percent))
 				btn = types.InlineKeyboardButton(text = "{} – {}".format(item.item, item.point), callback_data = item.item)
 			keyboard.add(btn)
 		msg_text += "\n👥 проголосовало пользователей: {}".format(count)
