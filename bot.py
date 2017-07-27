@@ -9,7 +9,8 @@ import json
 
 bot = telebot.TeleBot(cfg.token)
 
-chid = -1001124459892 # test channel id
+#chid = -1001124459892 # test channel id
+chid = -1001088809213 # https://t.me/feeltm
 #like = "👍"
 thumb_up = "👍"
 like = "🌀" 
@@ -157,8 +158,10 @@ def init(message):
 
 @bot.message_handler(content_types=['text'])
 def new_post(message):
-	#print(message.text)
+	#print(message)
 	sid = message.chat.id
+	if sid not in admins:
+		return False
 	keyboard = types.InlineKeyboardMarkup()
 	items = re.findall(r'\/poll', message.text)
 	if len(items) > 0:
