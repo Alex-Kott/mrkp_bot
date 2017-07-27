@@ -40,10 +40,12 @@ def decline(n):
 	l = n - 10 * math.floor(n / 10)
 	if l == 0:
 		return "пока никто не проголосовал"
-	if l in {1, 5, 6, 7, 8, 9}:
+	if l in {1}:
 		return "{} человек уже проголосовал".format(l)
-	else:
+	elif l in {2, 3, 4}:
 		return "{} человека уже проголосовало".format(l)
+	else:
+		return "{} человек уже проголосовало".format(l)		
 
 class BaseModel(Model):
 
