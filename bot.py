@@ -35,6 +35,14 @@ def xlikes(mp, p):
 		n = math.ceil(x/d)
 		return thumb_up * n
 
+def decline(n):
+	l = n - 10 * math.floor(n / 10)
+	if l == 0:
+		return "пока никто не проголосовал"
+	if l in {1, 5, 6, 7, 8, 9}:
+		return "{} человек уже проголосовал".format(l)
+	else:
+		return "{} человека уже проголосовало".format(l)
 
 class BaseModel(Model):
 
@@ -217,7 +225,7 @@ def callback_inline(call):
 			ls = ''
 
 		keyboard = types.InlineKeyboardMarkup()
-		like_btn = types.InlineKeyboardButton(text = "{} {}".format(ls, like), callback_data = like)
+		like_btn = types.InlineKeyboardButton(text = "{} {}".format(like, ls), callback_data = like)
 		dislike_btn = types.InlineKeyboardButton(text = "{} {}".format(ds, dislike), callback_data = dislike)
 		#keyboard.add(like_btn, dislike_btn)
 		keyboard.add(like_btn)
@@ -245,7 +253,7 @@ def callback_inline(call):
 				msg_text += "\n{} – {} \n {} {}%\n".format(item.item, item.point, xlikes(maxpoint, item.point), round(percent))
 				btn = types.InlineKeyboardButton(text = "{} – {}".format(item.item, item.point), callback_data = item.item)
 			keyboard.add(btn)
-		msg_text += "\n👥 {} человек уже проголосовал".format(count)
+		msg_text += "\n👥 {}".format(decline(count))
 		bot.edit_message_text(chat_id = call.message.chat.id, message_id = call.message.message_id, text = msg_text,  reply_markup=keyboard)
 		#bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 
