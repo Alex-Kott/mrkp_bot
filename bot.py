@@ -164,7 +164,7 @@ def new_post(message):
 			btn = types.InlineKeyboardButton(text = i, callback_data = i)
 			keyboard.add(btn)
 			msg_text += "\n{}\n{}0%\n".format(i, empty)
-		msg_text += "\n👥 ещё никто не проголосовал"
+		msg_text += "\n👥 пока никто не проголосовал"
 
 		sent = bot.send_message(chid, msg_text, parse_mode = "Markdown", reply_markup = keyboard)
 		Message.create(msg_id = sent.message_id, user_id = sid, msg_type=poll, text = text)
@@ -245,7 +245,7 @@ def callback_inline(call):
 				msg_text += "\n{} – {} \n {} {}%\n".format(item.item, item.point, xlikes(maxpoint, item.point), round(percent))
 				btn = types.InlineKeyboardButton(text = "{} – {}".format(item.item, item.point), callback_data = item.item)
 			keyboard.add(btn)
-		msg_text += "\n👥 проголосовало пользователей: {}".format(count)
+		msg_text += "\n👥 {} человек уже проголосовал".format(count)
 		bot.edit_message_text(chat_id = call.message.chat.id, message_id = call.message.message_id, text = msg_text,  reply_markup=keyboard)
 		#bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 
