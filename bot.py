@@ -39,13 +39,13 @@ def xlikes(mp, p):
 def decline(n):
 	l = n - 10 * math.floor(n / 10)
 	if l == 0:
-		return "пока никто не проголосовал"
+		return "пока никто не проголосовал."
 	if l in {1}:
-		return "{} человек уже проголосовал".format(l)
+		return "{} человек уже проголосовал.".format(l)
 	elif l in {2, 3, 4}:
-		return "{} человека уже проголосовало".format(l)
+		return "{} человека уже проголосовало.".format(l)
 	else:
-		return "{} человек уже проголосовало".format(l)		
+		return "{} человек уже проголосовало.".format(l)		
 
 class BaseModel(Model):
 
