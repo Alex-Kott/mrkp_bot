@@ -17,6 +17,7 @@ like = "🌀"
 dislike = "👎"
 poll = "poll" # пост-опрос
 common = "common" # тип поста. обыкновенный пост с лайком и дизлайком под сообщением.
+nolike = "nolike" # просто сообщение без лайка
 empty = "▫️"
 
 emoji = {like : 1, dislike : -1}
@@ -165,8 +166,15 @@ def new_post(message):
 	if sid not in admins:
 		return False
 	keyboard = types.InlineKeyboardMarkup()
-	items = re.findall(r'\/poll', message.text)
-	if len(items) > 0:
+
+	if len(re.findall(r'\/nolike', message.text)) > 0: # проверка не является ли сообщение сообщением типа nolike
+		msg_type = nolike
+	elif len(re.findall(r'\/poll', message.text)) > 0: # не является ли сообщение опросом
+		msg_type = poll
+	else:
+		msg_type = common
+
+	if msg_type == poll:
 		try:
 			(text, items) = re.split(r'\/poll', message.text)
 		except:
@@ -180,20 +188,22 @@ def new_post(message):
 		msg_text += "\n👥 пока никто не проголосовал"
 
 		sent = bot.send_message(chid, msg_text, parse_mode = "Markdown", reply_markup = keyboard)
-		Message.create(msg_id = sent.message_id, user_id = sid, msg_type=poll, text = text)
+		Message.create(msg_id = sent.message_id, user_id = sid, msg_type = poll, text = text)
 		message = Message.select().where(Message.user_id == sid).order_by(Message.msg_id.desc()).get()
 		item = list(set(item))
 		for j in item:
 			Poll.create(msg_id = message.msg_id, item = j, point = 0)
-
-	else:
+	if msg_type == common:
 		like_btn = types.InlineKeyboardButton(text = like, callback_data = like)
 		dislike_btn = types.InlineKeyboardButton(text = dislike, callback_data = dislike)
 		#keyboard.add(like_btn, dislike_btn)
 		keyboard.add(like_btn)
 		sent = bot.send_message(chid, message.text, parse_mode="Markdown", reply_markup=keyboard)
-		Message.create(msg_id = sent.message_id, user_id = sid, msg_type=common, text = message.text)
+		Message.create(msg_id = sent.message_id, user_id = sid, msg_type = common, text = message.text)
 		#Message.create(user_id = sid, type=common, text = message.text)
+	if msg_type == nolike:
+		sent = bot.send_message(chid, message.text, parse_mode="Markdown")
+		Message.create(msg_id = sent.message_id, user_id = sid, msg_type = nolike, text = message.text)
 
 
 
