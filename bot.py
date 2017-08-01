@@ -202,8 +202,9 @@ def new_post(message):
 		Message.create(msg_id = sent.message_id, user_id = sid, msg_type = common, text = message.text)
 		#Message.create(user_id = sid, type=common, text = message.text)
 	if msg_type == nolike:
-		sent = bot.send_message(chid, message.text, parse_mode="Markdown")
-		Message.create(msg_id = sent.message_id, user_id = sid, msg_type = nolike, text = message.text)
+		msg_text = re.sub(r'\/nolike', '', message.text)
+		sent = bot.send_message(chid, msg_text, parse_mode="Markdown")
+		Message.create(msg_id = sent.message_id, user_id = sid, msg_type = nolike, text = msg_text)
 
 
 
@@ -307,8 +308,5 @@ def query_text(message):
 
 
 if __name__ == '__main__':
-	try:
-		bot.polling(none_stop=True)
-	except Exception as e:
-		print(str(e))
-	
+	bot.polling(none_stop=True)
+
