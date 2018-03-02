@@ -200,5 +200,30 @@ def callback_inline(call):
 
 
 if __name__ == '__main__':
-	bot.polling(none_stop=True)
+	# Remove webhook, it fails sometimes the set if there is a previous webhook
+	bot.remove_webhook()
+
+
+	if LAUNCH_MODE == "DEV":
+		bot.polling(none_stop=True)
+	elif LAUNCH_MODE == "PROD":
+		app = web.Application()
+		app.router.add_post('/{token}/', handle)
+
+		
+		# Set webhook
+		bot.set_webhook(url=WEBHOOK_URL_BASE+WEBHOOK_URL_PATH,
+		                certificate=open(WEBHOOK_SSL_CERT, 'r'))
+
+		# Build ssl context
+		context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+		context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
+
+		# Start aiohttp server
+		web.run_app(
+		    app,
+		    host=WEBHOOK_LISTEN,
+		    port=WEBHOOK_PORT,
+		    ssl_context=context,
+		)
 	
