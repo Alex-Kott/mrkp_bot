@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 import telebot
 from telebot import types
-import cfg
+from cfg import *
 from peewee import *
 import re
 import math
 import json
+import ssl
+from aiohttp import web
 
-bot = telebot.TeleBot(cfg.token)
+bot = telebot.TeleBot(API_TOKEN)
 
 #chid = -1001124459892 # test channel id
 chid = -1001088809213 # https://t.me/feeltm
@@ -306,7 +308,44 @@ def query_text(message):
 	bot.answer_inline_query(inline_query_id = message.id, results = results)
 
 
+app = web.Application()
+
+# Process webhook calls
+async def handle(request):
+    if request.match_info.get('token') == bot.token:
+        request_body_dict = await request.json()
+        update = telebot.types.Update.de_json(request_body_dict)
+        bot.process_new_updates([update])
+        return web.Response()
+    else:
+        return web.Response(status=403)
+
+app.router.add_post('/{token}/', handle)
+
 
 if __name__ == '__main__':
-	bot.polling(none_stop=True)
+	# Remove webhook, it fails sometimes the set if there is a previous webhook
+	bot.remove_webhook()
 
+
+	if LAUNCH_MODE == "DEV":
+		bot.polling(none_stop=True)
+	elif LAUNCH_MODE == "PROD":
+		app = web.Application()
+		app.router.add_post('/{token}/', handle)
+
+		# Set webhook
+		bot.set_webhook(url=WEBHOOK_URL_BASE+WEBHOOK_URL_PATH,
+		                certificate=open(WEBHOOK_SSL_CERT, 'r'))
+
+		# Build ssl context
+		context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+		context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
+
+		# Start aiohttp server
+		web.run_app(
+		    app,
+		    host=WEBHOOK_LISTEN,
+		    port=WEBHOOK_PORT,
+		    ssl_context=context,
+		)
