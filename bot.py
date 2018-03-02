@@ -3,6 +3,8 @@ from telebot import types
 from cfg import *
 from peewee import *
 import re
+from aiohttp import web
+
 
 bot = telebot.TeleBot(API_TOKEN)
 
@@ -197,6 +199,22 @@ def callback_inline(call):
 		#bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
 		bot.edit_message_text(chat_id = call.message.chat.id, message_id = call.message.message_id, text = text,  reply_markup=keyboard)
 
+
+
+app = web.Application()
+
+
+# Process webhook calls
+async def handle(request):
+    if request.match_info.get('token') == bot.token:
+        request_body_dict = await request.json()
+        update = telebot.types.Update.de_json(request_body_dict)
+        bot.process_new_updates([update])
+        return web.Response()
+    else:
+        return web.Response(status=403)
+
+app.router.add_post('/{token}/', handle)
 
 
 if __name__ == '__main__':
