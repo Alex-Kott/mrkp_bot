@@ -1,10 +1,10 @@
 import telebot
 from telebot import types
-import cfg
+from cfg import *
 from peewee import *
 import re
 
-bot = telebot.TeleBot(cfg.token)
+bot = telebot.TeleBot(API_TOKEN)
 
 chid = -1001124459892 # test channel id
 like = "👍"
