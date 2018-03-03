@@ -11,8 +11,8 @@ from aiohttp import web
 
 bot = telebot.TeleBot(API_TOKEN)
 
-chid = -1001120980774 # test channel id
-# chid = -1001088809213 # https://t.me/feeltm
+# chid = -1001120980774 # test channel id
+chid = -1001088809213 # https://t.me/feeltm
 #like = "👍"
 thumb_up = "👍"
 like = "🌀" 
