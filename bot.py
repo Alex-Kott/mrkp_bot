@@ -248,6 +248,7 @@ def callback_inline(call):
 		#keyboard.add(like_btn, dislike_btn)
 		keyboard.add(like_btn)
 		bot.edit_message_reply_markup(chat_id = call.message.chat.id, message_id = call.message.message_id,  reply_markup=keyboard)
+		bot.answer_callback_query(callback_query_id = call.id, show_alert = True)
 	
 	if msg.msg_type == poll:
 		scoreboard = Scoreboard.vote(call.message.message_id, e, call.from_user.id)
